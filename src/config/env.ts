@@ -16,5 +16,9 @@ export const config = {
   gmail: {
     mcpUrl: process.env.GMAIL_MCP_URL || 'https://gmail.mcp.claude.com/mcp',
   },
+  smtpHost: process.env.SMTP_HOST || 'smtp.office365.com',
+  smtpPort: parseInt(process.env.SMTP_PORT || '587'),
+  smtpUser: process.env.SMTP_USER || 'kjenneth@cerix.dk',
+  smtpPass: process.env.SMTP_PASS || '',
   nodeEnv: process.env.NODE_ENV || 'development',
 };

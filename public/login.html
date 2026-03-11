@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - CeriX CEO-AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e4e4e7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .login-logo h1 {
+      font-size: 32px;
+      color: #a78bfa;
+      margin-bottom: 4px;
+    }
+    .login-logo p {
+      color: #71717a;
+      font-size: 14px;
+    }
+    .login-card {
+      background: #16171d;
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      padding: 32px;
+    }
+    .login-card h2 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    .login-card .subtitle {
+      color: #71717a;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: #a1a1aa;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: #0f1117;
+      border: 1px solid #27272a;
+      border-radius: 10px;
+      color: #e4e4e7;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus {
+      border-color: #7c3aed;
+    }
+    .form-group input::placeholder {
+      color: #52525b;
+    }
+    .otp-input {
+      text-align: center;
+      font-size: 28px !important;
+      letter-spacing: 8px;
+      font-weight: 600;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: #7c3aed;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #6d28d9;
+    }
+    .btn-primary:disabled {
+      background: #3f3f46;
+      color: #71717a;
+      cursor: not-allowed;
+    }
+    .btn-ghost {
+      background: none;
+      color: #a78bfa;
+      margin-top: 12px;
+    }
+    .btn-ghost:hover {
+      color: #c4b5fd;
+    }
+    .error-msg {
+      background: #1c1017;
+      border: 1px solid #7f1d1d;
+      color: #f87171;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .success-msg {
+      background: #0d1f14;
+      border: 1px solid #14532d;
+      color: #4ade80;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      color: #52525b;
+      font-size: 12px;
+    }
+    .step { display: none; }
+    .step.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-logo">
+      <h1>🤖 CeriX CEO-AI</h1>
+      <p>AI Business Team Platform</p>
+    </div>
+
+    <div class="login-card">
+      <!-- Step 1: Enter Email -->
+      <div id="step-email" class="step active">
+        <h2>Log ind</h2>
+        <p class="subtitle">Indtast din email for at modtage en login-kode.</p>
+        <div id="email-error" class="error-msg"></div>
+        <form id="email-form" onsubmit="sendCode(event)">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email-input" placeholder="din@email.dk" required autofocus />
+          </div>
+          <button type="submit" id="send-btn" class="btn btn-primary">Send login-kode</button>
+        </form>
+      </div>
+
+      <!-- Step 2: Enter Code -->
+      <div id="step-code" class="step">
+        <h2>Indtast kode</h2>
+        <p class="subtitle">Vi har sendt en 6-cifret kode til <strong id="sent-email"></strong></p>
+        <div id="code-error" class="error-msg"></div>
+        <div id="code-success" class="success-msg"></div>
+        <form id="code-form" onsubmit="verifyCode(event)">
+          <div class="form-group">
+            <label>6-cifret kode</label>
+            <input type="text" id="code-input" class="otp-input" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus inputmode="numeric" />
+          </div>
+          <button type="submit" id="verify-btn" class="btn btn-primary">Bekræft og log ind</button>
+        </form>
+        <button class="btn btn-ghost" onclick="backToEmail()">← Prøv med en anden email</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      CeriX CEO-AI v1.0 &middot; Beskyttet adgang
+    </div>
+  </div>
+
+  <script>
+    let userEmail = '';
+
+    async function sendCode(e) {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      const btn = document.getElementById('send-btn');
+      const errDiv = document.getElementById('email-error');
+      errDiv.style.display = 'none';
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Sender kode...';
+
+      try {
+        const res = await fetch('/api/auth/send-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          userEmail = email;
+          document.getElementById('sent-email').textContent = email;
+          document.getElementById('step-email').classList.remove('active');
+          document.getElementById('step-code').classList.add('active');
+          document.getElementById('code-input').focus();
+        } else {
+          errDiv.textContent = data.error;
+          errDiv.style.display = 'block';
+        }
+      } catch (err) {
+        errDiv.textContent = 'Netværksfejl. Prøv igen.';
+        errDiv.style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send login-kode';
+    }
+
+    async function verifyCode(e) {
+      e.preventDefault();
+      const code = document.getElementById('code-input').value.trim();
+      const btn = document.getElementById('verify-btn');
+      const errDiv = document.getElementById('code-error');
+      const successDiv = document.getElementById('code-success');
+      errDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Verificerer...';
+
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail, code }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          successDiv.textContent = 'Login succesfuldt! Omdirigerer...';
+          successDiv.style.display = 'block';
+          setTimeout(() => { window.location.href = '/'; }, 1000);
+        } else {
+          errDiv.textContent = data.error;
+          errDiv.style.display = 'block';
+          document.getElementById('code-input').value = '';
+          document.getElementById('code-input').focus();
+        }
+      } catch (err) {
+        errDiv.textContent = 'Netværksfejl. Prøv igen.';
+        errDiv.style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Bekræft og log ind';
+    }
+
+    function backToEmail() {
+      document.getElementById('step-code').classList.remove('active');
+      document.getElementById('step-email').classList.add('active');
+      document.getElementById('code-input').value = '';
+    }
+
+    // Auto-format OTP input
+    document.getElementById('code-input').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+    });
+  </script>
+</body>
+</html>
