@@ -9,7 +9,12 @@
     "dev": "ts-node src/server.ts",
     "test": "echo \"Tests coming soon\" && exit 0"
   },
-  "keywords": ["ai", "agents", "cerix", "business-automation"],
+  "keywords": [
+    "ai",
+    "agents",
+    "cerix",
+    "business-automation"
+  ],
   "author": "CeriX",
   "license": "ISC",
   "dependencies": {
@@ -23,6 +28,7 @@
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
     "mysql2": "^3.19.1",
+    "openai": "^6.27.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0"

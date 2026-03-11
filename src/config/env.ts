@@ -3,8 +3,8 @@ dotenv.config();
 
 export const config = {
   port: parseInt(process.env.PORT || '3000'),
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
-  claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+  openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+  claudeModel: process.env.CLAUDE_MODEL || 'anthropic/claude-sonnet-4',
   database: {
     url: process.env.MYSQL_URL || process.env.DATABASE_URL || '',
     host: process.env.MYSQLHOST || 'localhost',
