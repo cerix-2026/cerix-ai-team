@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import crypto from 'crypto';
 import { config } from '../config/env';
 
-// In-memory OTP store (code -> { email, expires, attempts })
+// In-memory OTP store (key -> { email, code, expires, attempts })
 const otpStore = new Map<string, { email: string; code: string; expires: number; attempts: number }>();
 
 // In-memory session store (token -> { email, expires })
@@ -26,24 +26,7 @@ function generateSessionToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Create email transporter
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: config.smtpHost || 'smtp.office365.com',
-    port: config.smtpPort || 587,
-    secure: false,
-    auth: {
-      user: config.smtpUser || ALLOWED_EMAIL,
-      pass: config.smtpPass,
-    },
-    tls: {
-      ciphers: 'SSLv3',
-      rejectUnauthorized: false,
-    },
-  });
-}
-
-// Send OTP email
+// Send OTP email via Resend
 export async function sendOTPEmail(email: string): Promise<boolean> {
   if (email.toLowerCase() !== ALLOWED_EMAIL) {
     return false;
@@ -65,32 +48,34 @@ export async function sendOTPEmail(email: string): Promise<boolean> {
   });
 
   try {
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"CeriX CEO-AI" <${config.smtpUser || ALLOWED_EMAIL}>`,
+    const resend = new Resend(config.resendApiKey);
+
+    await resend.emails.send({
+      from: 'CeriX CEO-AI <noreply@cerix.dk>',
       to: email,
-      subject: `🔐 Din login-kode: ${code}`,
+      subject: `Din login-kode: ${code}`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 400px; margin: 0 auto; padding: 40px 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #7c3aed; font-size: 24px; margin: 0;">CeriX CEO-AI</h1>
-            <p style="color: #71717a; font-size: 14px;">Login bekræftelse</p>
+            <p style="color: #71717a; font-size: 14px;">Login bekr&aelig;ftelse</p>
           </div>
           <div style="background: #f4f4f5; border-radius: 12px; padding: 30px; text-align: center;">
             <p style="color: #27272a; font-size: 14px; margin-bottom: 20px;">Din engangskode er:</p>
             <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #7c3aed; padding: 15px; background: white; border-radius: 8px; display: inline-block;">
               ${code}
             </div>
-            <p style="color: #71717a; font-size: 12px; margin-top: 20px;">Koden udløber om 10 minutter.</p>
+            <p style="color: #71717a; font-size: 12px; margin-top: 20px;">Koden udl&oslash;ber om 10 minutter.</p>
           </div>
           <p style="color: #a1a1aa; font-size: 11px; text-align: center; margin-top: 20px;">Hvis du ikke anmodede om denne kode, kan du ignorere denne email.</p>
         </div>
       `,
     });
-    console.log(`✅ OTP sendt til ${email}`);
+
+    console.log(`OTP sendt til ${email} via Resend`);
     return true;
   } catch (error) {
-    console.error('❌ Fejl ved afsendelse af OTP:', error);
+    console.error('Fejl ved afsendelse af OTP via Resend:', error);
     return false;
   }
 }
