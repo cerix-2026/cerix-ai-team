@@ -3,6 +3,8 @@ import { config } from '../config/env';
 import { getDb } from '../database';
 import { agentLogs } from '../database/schema';
 import { AgentName, AgentResult, AgentTask } from '../types';
+import { skills } from '../database/schema';
+import { eq } from 'drizzle-orm';
 
 export abstract class BaseAgent {
   protected client: OpenAI;
@@ -39,12 +41,31 @@ export abstract class BaseAgent {
     console.log(`${icon} [${this.name.toUpperCase()}] ${action}: ${details}`);
   }
 
+  protected async getSkillPrompts(): Promise<string> {
+    try {
+      const db = getDb();
+      const installedSkills = await db.select().from(skills).where(eq(skills.installed, true));
+      const relevantSkills = installedSkills.filter((s: any) => {
+        const agents = typeof s.agents === 'string' ? JSON.parse(s.agents) : (s.agents || []);
+        return agents.includes(this.name);
+      });
+      if (relevantSkills.length === 0) return '';
+      return '\n\n--- INSTALLEREDE SKILLS ---\n' +
+        relevantSkills.map((s: any) => `[${s.name}]: ${s.prompt}`).join('\n\n');
+    } catch {
+      return '';
+    }
+  }
+
   protected async chat(userMessage: string, maxTokens: number = 4096): Promise<string> {
+    const skillPrompts = await this.getSkillPrompts();
+    const fullSystemPrompt = this.systemPrompt + skillPrompts;
+
     const response = await this.client.chat.completions.create({
       model: config.claudeModel,
       max_tokens: maxTokens,
       messages: [
-        { role: 'system', content: this.systemPrompt },
+        { role: 'system', content: fullSystemPrompt },
         { role: 'user', content: userMessage },
       ],
     });

@@ -5,6 +5,7 @@ import { config } from './config/env';
 import { initDatabase } from './database';
 import agentRoutes from './routes/agent-routes';
 import dataRoutes from './routes/data-routes';
+import skillRoutes from './routes/skill-routes';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // API Routes
 app.use('/api/agents', agentRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/skills', skillRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -85,6 +85,20 @@ export const kpiSnapshots = mysqlTable('kpi_snapshots', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// ==================== AGENT SKILLS ====================
+export const skills = mysqlTable('skills', {
+  id: int('id').primaryKey().autoincrement(),
+  name: varchar('name', { length: 100 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull(),
+  description: text('description').notNull(),
+  icon: varchar('icon', { length: 10 }).default('🔧'),
+  category: varchar('category', { length: 50 }).notNull(),
+  agents: json('agents'), // array of agent names that can use this skill
+  prompt: text('prompt').notNull(), // instructions injected into agent system prompt
+  installed: boolean('installed').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // ==================== RESEARCH REPORTS ====================
 export const researchReports = mysqlTable('research_reports', {
   id: int('id').primaryKey().autoincrement(),

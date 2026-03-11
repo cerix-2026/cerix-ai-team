@@ -98,6 +98,28 @@
     .task-form input, .task-form textarea, .task-form select { background: #0f1117; border: 1px solid #27272a; border-radius: 8px; padding: 10px 14px; color: #e4e4e7; font-size: 14px; resize: vertical; font-family: inherit; }
     .task-form textarea { min-height: 80px; }
     .result-panel { background: #0f1117; border: 1px solid #27272a; border-radius: 8px; padding: 16px; margin-top: 12px; white-space: pre-wrap; font-size: 13px; max-height: 400px; overflow-y: auto; }
+
+    /* Skills */
+    .skill-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .skill-card { background: #16171d; border: 1px solid #27272a; border-radius: 14px; padding: 20px; transition: all 0.2s; }
+    .skill-card:hover { border-color: #3f3f46; }
+    .skill-card.installed { border-color: #4ade80; background: #0d1f14; }
+    .skill-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .skill-icon { width: 42px; height: 42px; border-radius: 10px; background: #1e1f26; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .skill-name { font-size: 16px; font-weight: 600; }
+    .skill-category { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #27272a; color: #a1a1aa; }
+    .skill-desc { font-size: 13px; color: #a1a1aa; margin-bottom: 12px; line-height: 1.5; }
+    .skill-agents { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .skill-agent-tag { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: #1e1f26; color: #71717a; }
+    .skill-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .skill-btn-install { background: #7c3aed; color: white; }
+    .skill-btn-install:hover { background: #6d28d9; }
+    .skill-btn-remove { background: #1e1f26; color: #f87171; border: 1px solid #27272a; }
+    .skill-btn-remove:hover { background: #1c1017; border-color: #f87171; }
+    .skill-filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .skill-filter { padding: 6px 14px; border-radius: 20px; border: 1px solid #27272a; background: #16171d; color: #a1a1aa; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+    .skill-filter:hover { border-color: #a78bfa; color: #a78bfa; }
+    .skill-filter.active { background: #7c3aed; color: white; border-color: #7c3aed; }
   </style>
 </head>
 <body>
@@ -125,24 +147,36 @@
       const [inputText, setInputText] = useState('');
       const [recording, setRecording] = useState(false);
       const [taskResult, setTaskResult] = useState(null);
+      const [allSkills, setAllSkills] = useState([]);
+      const [skillFilter, setSkillFilter] = useState('Alle');
       const messagesEnd = useRef(null);
       const recognitionRef = useRef(null);
       const textareaRef = useRef(null);
 
       const fetchData = useCallback(async () => {
         try {
-          const [kpiRes, leadsRes, logsRes, jobsRes] = await Promise.all([
+          const [kpiRes, leadsRes, logsRes, jobsRes, skillsRes] = await Promise.all([
             fetch('/api/data/kpi').then(r => r.json()),
             fetch('/api/data/leads').then(r => r.json()),
             fetch('/api/data/logs?limit=30').then(r => r.json()),
             fetch('/api/data/jobs').then(r => r.json()),
+            fetch('/api/skills').then(r => r.json()),
           ]);
           if (kpiRes.success) setKpi(kpiRes.data);
           if (leadsRes.success) setLeads(leadsRes.data);
           if (logsRes.success) setLogs(logsRes.data);
           if (jobsRes.success) setJobs(jobsRes.data);
+          if (skillsRes.success) setAllSkills(skillsRes.data);
         } catch (e) { console.error(e); }
       }, []);
+
+      async function toggleSkill(slug, isInstalled) {
+        try {
+          const action = isInstalled ? 'uninstall' : 'install';
+          await fetch(`/api/skills/${slug}/${action}`, { method: 'POST' });
+          fetchData();
+        } catch (e) { console.error(e); }
+      }
 
       useEffect(() => { fetchData(); const i = setInterval(fetchData, 15000); return () => clearInterval(i); }, [fetchData]);
       useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory, selectedAgent]);
@@ -268,6 +302,7 @@
               ['dashboard', '📊', 'Dashboard'],
               ['agents', '🤖', 'Agenter'],
               ['task', '📝', 'Send Opgave'],
+              ['skills', '🧩', 'Skills'],
             ].map(([key, icon, label]) => (
               <div key={key} className={`nav-item ${page === key ? 'active' : ''}`} onClick={() => { setPage(key); setSelectedAgent(null); }}>
                 {icon} {label}
@@ -473,6 +508,51 @@
                 </div>
               </>
             )}
+            {/* SKILLS MARKETPLACE */}
+            {page === 'skills' && (() => {
+              const categories = ['Alle', ...new Set(allSkills.map(s => s.category))];
+              const filtered = skillFilter === 'Alle' ? allSkills : allSkills.filter(s => s.category === skillFilter);
+              const installedCount = allSkills.filter(s => s.installed).length;
+              return (
+                <>
+                  <div className="header">
+                    <h2>Skills Marketplace</h2>
+                    <span className="status-badge" style={{background:'#1e1f26', color:'#a78bfa'}}>{installedCount} / {allSkills.length} installeret</span>
+                  </div>
+                  <div className="skill-filter-bar">
+                    {categories.map(cat => (
+                      <button key={cat} className={`skill-filter ${skillFilter === cat ? 'active' : ''}`} onClick={() => setSkillFilter(cat)}>{cat}</button>
+                    ))}
+                  </div>
+                  <div className="skill-grid">
+                    {filtered.map(skill => {
+                      const agents = typeof skill.agents === 'string' ? JSON.parse(skill.agents) : (skill.agents || []);
+                      return (
+                        <div key={skill.slug} className={`skill-card ${skill.installed ? 'installed' : ''}`}>
+                          <div className="skill-card-header">
+                            <div className="skill-icon">{skill.icon}</div>
+                            <div>
+                              <div className="skill-name">{skill.name}</div>
+                              <span className="skill-category">{skill.category}</span>
+                            </div>
+                          </div>
+                          <div className="skill-desc">{skill.description}</div>
+                          <div className="skill-agents">
+                            {agents.map(a => (
+                              <span key={a} className="skill-agent-tag">{AGENTS[a]?.icon} {AGENTS[a]?.label.replace(' Agent','') || a}</span>
+                            ))}
+                          </div>
+                          <button className={`skill-btn ${skill.installed ? 'skill-btn-remove' : 'skill-btn-install'}`} onClick={() => toggleSkill(skill.slug, skill.installed)}>
+                            {skill.installed ? '✕ Afinstallér' : '⬇ Installér'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
+
           </div>
         </div>
       );
