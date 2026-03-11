@@ -52,5 +52,13 @@ export abstract class BaseAgent {
     return response.choices[0]?.message?.content || '';
   }
 
+  // Public conversational chat — for the chat UI
+  async chatMessage(userMessage: string): Promise<string> {
+    await this.log('chat', `Besked modtaget: ${userMessage.slice(0, 80)}`, undefined, 'info');
+    const response = await this.chat(userMessage);
+    await this.log('chat_response', `Svar sendt (${response.length} tegn)`, undefined, 'success');
+    return response;
+  }
+
   abstract execute(task: AgentTask): Promise<AgentResult>;
 }

@@ -178,22 +178,16 @@
         }));
 
         try {
-          const body = agentKey === 'ceo'
-            ? { title: msg.slice(0, 80), description: msg, priority: 'medium' }
-            : { title: msg.slice(0, 80), description: msg, priority: 'medium' };
-
-          const res = await fetch(agent.endpoint, {
+          const res = await fetch('/api/agents/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ agent: agentKey, message: msg }),
           });
           const data = await res.json();
 
           setChatHistory(prev => {
             const hist = (prev[agentKey] || []).filter(m => m.role !== 'thinking');
-            const responseText = data.success
-              ? (data.data?.result || data.data?.summary || JSON.stringify(data.data, null, 2))
-              : `Fejl: ${data.error}`;
+            const responseText = data.success ? data.message : `Fejl: ${data.error}`;
             return { ...prev, [agentKey]: [...hist, { role: 'agent', text: responseText }] };
           });
           fetchData();

@@ -81,4 +81,39 @@ router.post('/finance', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/agents/chat - Samtale med en specifik agent
+router.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { agent, message } = req.body;
+
+    if (!agent || !message) {
+      return res.status(400).json({ success: false, error: 'agent og message er påkrævet' });
+    }
+
+    const agentMap: Record<string, any> = {
+      ceo: ceoAgent,
+      research: researchAgent,
+      leadgen: leadgenAgent,
+      content: contentAgent,
+      finance: financeAgent,
+    };
+
+    const selectedAgent = agentMap[agent];
+    if (!selectedAgent) {
+      return res.status(400).json({ success: false, error: `Ukendt agent: ${agent}` });
+    }
+
+    const response = await selectedAgent.chatMessage(message);
+
+    res.json({
+      success: true,
+      agent,
+      message: response,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;
