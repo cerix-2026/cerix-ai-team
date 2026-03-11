@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CeriX CEO-AI Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e4e4e7; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #16171d; border-right: 1px solid #27272a; padding: 20px 0; flex-shrink: 0; }
+    .sidebar h1 { font-size: 18px; padding: 0 20px 20px; color: #a78bfa; display: flex; align-items: center; gap: 8px; }
+    .sidebar h1 span { font-size: 24px; }
+    .nav-item { padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; font-size: 14px; }
+    .nav-item:hover { background: #1e1f26; }
+    .nav-item.active { background: #1e1f26; color: #a78bfa; border-left: 3px solid #a78bfa; }
+    .main { flex: 1; padding: 24px; overflow-y: auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .header h2 { font-size: 24px; font-weight: 600; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+    .status-online { background: #052e16; color: #4ade80; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: #16171d; border: 1px solid #27272a; border-radius: 12px; padding: 20px; }
+    .card-label { font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .card-value { font-size: 28px; font-weight: 700; color: #fff; }
+    .card-sub { font-size: 12px; color: #a78bfa; margin-top: 4px; }
+    .panel { background: #16171d; border: 1px solid #27272a; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .panel h3 { font-size: 16px; margin-bottom: 16px; color: #d4d4d8; }
+    .task-form { display: flex; flex-direction: column; gap: 12px; }
+    .task-form input, .task-form textarea, .task-form select { background: #0f1117; border: 1px solid #27272a; border-radius: 8px; padding: 10px 14px; color: #e4e4e7; font-size: 14px; resize: vertical; }
+    .task-form textarea { min-height: 80px; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+    .btn-primary { background: #7c3aed; color: white; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-primary:disabled { background: #3f3f46; color: #71717a; cursor: not-allowed; }
+    .log-entry { padding: 8px 0; border-bottom: 1px solid #1e1f26; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+    .log-time { color: #52525b; min-width: 70px; font-family: monospace; font-size: 12px; }
+    .log-agent { min-width: 70px; font-weight: 600; font-size: 12px; padding: 2px 6px; border-radius: 4px; text-align: center; }
+    .agent-ceo { background: #312e81; color: #a78bfa; }
+    .agent-research { background: #1e3a5f; color: #60a5fa; }
+    .agent-leadgen { background: #14532d; color: #4ade80; }
+    .agent-content { background: #713f12; color: #fbbf24; }
+    .agent-finance { background: #4c1d95; color: #c084fc; }
+    .lead-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e1f26; }
+    .lead-name { font-weight: 500; }
+    .lead-info { font-size: 12px; color: #71717a; }
+    .score { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .score-high { background: #052e16; color: #4ade80; }
+    .score-med { background: #422006; color: #fbbf24; }
+    .score-low { background: #450a0a; color: #f87171; }
+    .loading { text-align: center; padding: 40px; color: #71717a; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #3f3f46; border-top: 2px solid #a78bfa; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .result-panel { background: #0f1117; border: 1px solid #27272a; border-radius: 8px; padding: 16px; margin-top: 12px; white-space: pre-wrap; font-size: 13px; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    const AGENTS = {
+      ceo: { icon: '🧠', label: 'CEO', color: 'agent-ceo' },
+      research: { icon: '🔍', label: 'Research', color: 'agent-research' },
+      leadgen: { icon: '🎯', label: 'LeadGen', color: 'agent-leadgen' },
+      content: { icon: '✍️', label: 'Content', color: 'agent-content' },
+      finance: { icon: '📊', label: 'Finance', color: 'agent-finance' },
+    };
+
+    function App() {
+      const [page, setPage] = useState('dashboard');
+      const [kpi, setKpi] = useState(null);
+      const [leads, setLeads] = useState([]);
+      const [logs, setLogs] = useState([]);
+      const [jobs, setJobs] = useState([]);
+      const [taskResult, setTaskResult] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [sending, setSending] = useState(false);
+
+      const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+          const [kpiRes, leadsRes, logsRes, jobsRes] = await Promise.all([
+            fetch('/api/data/kpi').then(r => r.json()),
+            fetch('/api/data/leads').then(r => r.json()),
+            fetch('/api/data/logs?limit=30').then(r => r.json()),
+            fetch('/api/data/jobs').then(r => r.json()),
+          ]);
+          if (kpiRes.success) setKpi(kpiRes.data);
+          if (leadsRes.success) setLeads(leadsRes.data);
+          if (logsRes.success) setLogs(logsRes.data);
+          if (jobsRes.success) setJobs(jobsRes.data);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+      }, []);
+
+      useEffect(() => { fetchData(); const i = setInterval(fetchData, 15000); return () => clearInterval(i); }, [fetchData]);
+
+      async function sendTask(e) {
+        e.preventDefault();
+        const form = e.target;
+        const title = form.title.value;
+        const description = form.description.value;
+        const priority = form.priority.value;
+        if (!title || !description) return;
+        setSending(true);
+        setTaskResult(null);
+        try {
+          const res = await fetch('/api/agents/task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description, priority }),
+          });
+          const data = await res.json();
+          setTaskResult(data);
+          form.reset();
+          fetchData();
+        } catch (e) { setTaskResult({ success: false, error: e.message }); }
+        setSending(false);
+      }
+
+      const overview = kpi?.overview || {};
+
+      return (
+        <div className="app">
+          <div className="sidebar">
+            <h1><span>🤖</span> CEO-AI</h1>
+            {[
+              ['dashboard', '📊', 'Dashboard'],
+              ['task', '🧠', 'Send Opgave'],
+              ['leads', '🎯', 'Leads'],
+              ['activity', '📋', 'Aktivitet'],
+              ['jobs', '⚡', 'Jobs'],
+            ].map(([key, icon, label]) => (
+              <div key={key} className={`nav-item ${page === key ? 'active' : ''}`} onClick={() => setPage(key)}>
+                {icon} {label}
+              </div>
+            ))}
+          </div>
+          <div className="main">
+            {page === 'dashboard' && (
+              <>
+                <div className="header">
+                  <h2>Dashboard</h2>
+                  <span className="status-badge status-online">● System Online</span>
+                </div>
+                <div className="cards">
+                  <div className="card">
+                    <div className="card-label">Total Leads</div>
+                    <div className="card-value">{overview.totalLeads || 0}</div>
+                    <div className="card-sub">{overview.qualifiedLeads || 0} kvalificerede</div>
+                  </div>
+                  <div className="card">
+                    <div className="card-label">Emails</div>
+                    <div className="card-value">{overview.sentEmails || 0}</div>
+                    <div className="card-sub">{overview.totalEmails || 0} total oprettet</div>
+                  </div>
+                  <div className="card">
+                    <div className="card-label">Jobs Afsluttet</div>
+                    <div className="card-value">{overview.completedJobs || 0}</div>
+                  </div>
+                  <div className="card">
+                    <div className="card-label">Revenue (DKK)</div>
+                    <div className="card-value">{Number(overview.totalRevenue || 0).toLocaleString('da-DK')}</div>
+                  </div>
+                </div>
+                <div className="panel">
+                  <h3>Seneste Aktivitet</h3>
+                  {(kpi?.recentActivity || []).slice(0, 8).map((log, i) => (
+                    <div key={i} className="log-entry">
+                      <span className="log-time">{new Date(log.created_at).toLocaleTimeString('da-DK', {hour:'2-digit',minute:'2-digit'})}</span>
+                      <span className={`log-agent ${AGENTS[log.agent]?.color || ''}`}>{AGENTS[log.agent]?.icon} {log.agent}</span>
+                      <span>{log.action}: {(log.details || '').slice(0, 100)}</span>
+                    </div>
+                  ))}
+                  {(!kpi?.recentActivity?.length) && <div className="loading">Ingen aktivitet endnu. Send en opgave for at komme i gang!</div>}
+                </div>
+              </>
+            )}
+
+            {page === 'task' && (
+              <>
+                <div className="header"><h2>Send Opgave til CEO Agent</h2></div>
+                <div className="panel">
+                  <form className="task-form" onSubmit={sendTask}>
+                    <input name="title" placeholder="Opgave titel (fx: Find 10 danske SMV'er der kunne bruge AI)" required />
+                    <textarea name="description" placeholder="Beskrivelse af opgaven..." required />
+                    <select name="priority">
+                      <option value="medium">Normal prioritet</option>
+                      <option value="high">Høj prioritet</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="low">Lav prioritet</option>
+                    </select>
+                    <button type="submit" className="btn btn-primary" disabled={sending}>
+                      {sending ? <><span className="spinner"></span> CEO Agent arbejder...</> : '🧠 Send til CEO Agent'}
+                    </button>
+                  </form>
+                  {taskResult && (
+                    <div className="result-panel">
+                      <strong>{taskResult.success ? '✅ Opgave afsluttet' : '❌ Fejl'}</strong>
+                      <pre>{JSON.stringify(taskResult.data || taskResult.error, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {page === 'leads' && (
+              <>
+                <div className="header"><h2>Leads ({leads.length})</h2></div>
+                <div className="panel">
+                  {leads.length === 0 && <div className="loading">Ingen leads endnu. Bed CEO Agent om at finde leads!</div>}
+                  {leads.map((lead, i) => (
+                    <div key={i} className="lead-row">
+                      <div>
+                        <div className="lead-name">{lead.company_name}</div>
+                        <div className="lead-info">{lead.contact_name} · {lead.industry} · {lead.location}</div>
+                      </div>
+                      <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                        <span className={`score ${lead.score >= 70 ? 'score-high' : lead.score >= 40 ? 'score-med' : 'score-low'}`}>
+                          {lead.score}
+                        </span>
+                        <span className="status-badge" style={{background:'#1e1f26', fontSize:'11px'}}>{lead.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {page === 'activity' && (
+              <>
+                <div className="header"><h2>Agent Aktivitet</h2></div>
+                <div className="panel">
+                  {logs.length === 0 && <div className="loading">Ingen aktivitet endnu.</div>}
+                  {logs.map((log, i) => (
+                    <div key={i} className="log-entry">
+                      <span className="log-time">{new Date(log.created_at).toLocaleTimeString('da-DK', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+                      <span className={`log-agent ${AGENTS[log.agent]?.color || ''}`}>{AGENTS[log.agent]?.icon} {log.agent}</span>
+                      <span style={{color: log.status === 'error' ? '#f87171' : log.status === 'success' ? '#4ade80' : '#d4d4d8'}}>
+                        {log.action}: {(log.details || '').slice(0, 150)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {page === 'jobs' && (
+              <>
+                <div className="header"><h2>Jobs ({jobs.length})</h2></div>
+                <div className="panel">
+                  {jobs.length === 0 && <div className="loading">Ingen jobs endnu.</div>}
+                  {jobs.map((job, i) => (
+                    <div key={i} className="lead-row">
+                      <div>
+                        <div className="lead-name">{job.title}</div>
+                        <div className="lead-info">Agent: {job.assigned_agent} · Prioritet: {job.priority}</div>
+                      </div>
+                      <span className={`status-badge ${job.status === 'completed' ? 'status-online' : ''}`}
+                        style={{background: job.status === 'completed' ? '#052e16' : job.status === 'in_progress' ? '#422006' : '#1e1f26',
+                                color: job.status === 'completed' ? '#4ade80' : job.status === 'in_progress' ? '#fbbf24' : '#71717a'}}>
+                        {job.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
